@@ -2,9 +2,14 @@ import logging
 import threading
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, CallbackContext
-
+import paho.mqtt.publish as publish
 # Set up logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+
+# URL for the MQTT script 
+MQTT_BROKER = 'localhost'
+MQTT_PORT = 1883
+MQTT_SCRIPT_TOPIC = 'mqtt_script_topic'
 
 # Set of subscribed topics
 subscribed_topics = set()
@@ -35,6 +40,12 @@ def subscribe(update: Update, context: CallbackContext) -> None:
         topic = command_parts[1].strip()
         # Now 'topic' contains the extracted topic
         update.message.reply_text(f"Subscribing to topic: {topic}")
+        # Publish a message to the MQTT script topic
+        publish.single(MQTT_SCRIPT_TOPIC, payload=f'{chat_id},{topic}', hostname=MQTT_BROKER)
+
+        # Respond to the user
+        update.message.reply_text(f"Subscribed to MQTT topic: {topic}")
+
     else:
         update.message.reply_text("Invalid /subscribe command. Please provide a topic.")
 
