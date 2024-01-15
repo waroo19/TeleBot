@@ -3,6 +3,7 @@ import threading
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, CallbackContext
 import paho.mqtt.publish as publish
+from mqtt_sub import subscribe_to_topic
 # Set up logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -33,16 +34,18 @@ def subscribe(update: Update, context: CallbackContext) -> None:
 
     #Get chat ID and the topic from the user's message
     chat_id = update.message.chat.id
-    command_parts = update.message.text.split(' ', 1)
+    command_parts = update.message.text.split()
+    print(f"Subscribed to topic: {command_parts}")
 
-    # Check if the command is "/subscribe" and there is a topic provided
+    # Check if the command is "/subscribe" and there is a topic provided, mode is optional
     if len(command_parts) > 1 and command_parts[0].lower() == "/subscribe":
         topic = command_parts[1].strip()
+        mode = command_parts[2].strip()
         # Now 'topic' contains the extracted topic
         update.message.reply_text(f"Subscribing to topic: {topic}")
         # Publish a message to the MQTT script topic
-        publish.single(MQTT_SCRIPT_TOPIC, payload=f'{chat_id},{topic}', hostname=MQTT_BROKER)
-
+        publish.single(MQTT_SCRIPT_TOPIC, payload=f'{chat_id},{topic},{mode}', hostname=MQTT_BROKER)
+        #subscribe_to_topic(chat_id,topic)
         # Respond to the user
         update.message.reply_text(f"Subscribed to MQTT topic: {topic}")
 
@@ -53,7 +56,11 @@ def subscribe(update: Update, context: CallbackContext) -> None:
     subscribed_topics.add(topic)
 
     # Inform the user about the subscription
-    update.message.reply_text(f"Subscribed MQTT topics: {topic}")
+    update.message.reply_text(f"Subscribed MQTT topics: {subscribed_topics}")
+
+    # Write to file
+    with open("sub_topics.txt","a") as file:
+        file.write(f'{chat_id},{topic},{mode}')
 
 
 
