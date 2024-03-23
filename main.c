@@ -361,38 +361,42 @@ static int auto_con(void){
 
 }*/
 
+// Define a struct to hold topic-message pairs
+typedef struct {
+    char *topic;
+    char *message;
+} TopicMessagePair;
+
+
 static int auto_pubAll(void) {
-    // Define an array of topics
-    char *topics[] = {
-        "sensors/temperature",
-        "sensors/humidity",
-        "sensors/light"
+    // Define an array of topic-message pairs
+    TopicMessagePair pairs[] = {
+        {"sensors/temperature", "temperature_data"},
+        {"sensors/humidity", "humidity_data"},
+        {"sensors/light", "light_data"}
     };
 
-    // Define message string and QoS level
-    char *message_str = "testing";
-    enum QoS qos = 1; // Default QoS level is QoS 0
+    enum QoS qos = 1; 
 
     MQTTMessage message;
-    message.qos = qos; // Set QoS level for the message
-
-    message.retained = IS_RETAINED_MSG;
-
-    // Set message payload and payload length
-    message.payload = (void *)message_str; // Payload is the string message
-    message.payloadlen = strlen(message_str); // Payload length
-
-    int rc;
-    int num_topics = sizeof(topics) / sizeof(topics[0]);
+    message.qos = qos; 
+    message.retained = IS_RETAINED_MSG; 
+    
+    int rc ;
+    int num_pairs = sizeof(pairs) / sizeof(pairs[0]);
 
     // Publish message to each topic
-    for (int i = 0; i < num_topics; i++) {
-        if ((rc = MQTTPublish(&client, topics[i], &message)) < 0) {
-            printf("mqtt_example: Unable to publish to topic %s (%d)\n", topics[i], rc);
+    for (int i = 0; i < num_pairs; i++) {
+        message.payload = (void *)pairs[i].message;
+        message.payloadlen = strlen(pairs[i].message); // Payload length
+
+        // Publish the message to the current topic
+        if ((rc = MQTTPublish(&client, pairs[i].topic, &message)) < 0) {
+            printf("mqtt_example: Unable to publish to topic %s (%d)\n", pairs[i].topic, rc);
         }
         else {
             printf("mqtt_example: Message (%s) has been published to topic %s with QoS %d\n",
-                   (char *)message.payload, topics[i], (int)message.qos);
+                   (char *)message.payload, pairs[i].topic, (int)message.qos);
         }
     }
 
