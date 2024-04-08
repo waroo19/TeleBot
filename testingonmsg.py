@@ -7,11 +7,13 @@ from telegram.ext import Updater, CommandHandler
 import logging
 from telegram import Update
 from telegram.ext import CallbackContext
+from telegram import Bot
+
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 # Telegram bot token
 BOT_TOKEN = "6881742840:AAEgTkuFUXNucJdSejI8ZfZ5e0OCzUleqtQ"
 
-broker = '18.212.148.133'
+broker = '54.85.61.173'
 port = 1883
 topic = "testing"
 # Generate a Client ID with the subscribe prefix.
@@ -30,9 +32,21 @@ def connect_mqtt() -> mqtt_client:
     client.connect(broker, port)
     return client
 
-def subscribe(client: mqtt_client):
-    def on_message(client, userdata, msg):
-        print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
+def on_message(client, userdata, msg):
+    message = f"Received `{msg.payload.decode()}` from `{msg.topic}` topic"
+    # Initialize the Telegram bot
+    bot = Bot(token=BOT_TOKEN)
+
+    # Send the message to the Telegram chat
+    bot.send_message(chat_id=chat_id, text=message)
+
+
+
+
+
+
+def subscribe_topic(client: mqtt_client):
+    
 
     client.subscribe(topic)
     client.on_message = on_message
@@ -42,14 +56,18 @@ def subscribe(client: mqtt_client):
 def connect_broker(update, context):
     """Connect to MQTT broker."""
     client = connect_mqtt()
-    subscribe(client)
+    subscribe_topic(client)
     client.loop_start()
     update.message.reply_text("Connected to MQTT broker.")
+    update.message.reply_text(f"Subscribed to topic: {topic}")
 
-def run():
-    client = connect_mqtt()
-    subscribe(client)
-    client.loop_forever()
+def start(update: Update, context: CallbackContext) -> None:
+    global chat_id
+    chat_id = update.effective_chat.id
+    
+    print(f"Chat ID is: {chat_id}")
+    context.bot.send_message(chat_id=chat_id, text="Welcome")
+
 
 def main():
     
@@ -62,7 +80,7 @@ def main():
     # Register the command handler for /connect
     dp.add_handler(CommandHandler("con", connect_broker))
     dp.add_handler(CommandHandler("help", help))
-
+    dp.add_handler(CommandHandler("start", start))
     # Start the Bot
     updater.start_polling()
 
