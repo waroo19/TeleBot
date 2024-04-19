@@ -287,7 +287,7 @@ typedef struct {
     char topic[64];
     char payload[64];
 } Message;
-
+int light_flag = 0;
 static int auto_con(void){
     
     // define IP Address
@@ -337,7 +337,22 @@ static int auto_con(void){
 
 
 }
+// Structure to store received message information
+typedef struct {
+  char* topic;
+  size_t topic_len;
+  char* payload;
+  size_t payload_len;
+} mqtt_message_t;
 
+// Queue implementation (replace with your preferred thread-safe queue library)
+typedef struct queue {
+  void* data;
+  struct queue* next;
+} queue_t;
+
+queue_t* head = NULL;
+queue_t* tail = NULL;
 // Define a struct to hold topic-message pairs
 typedef struct {
     char *topic;
@@ -346,7 +361,7 @@ typedef struct {
 /* void *auto_pub(void *threadid ) {
     
     enum QoS qos = 0; 
-    const char* topic = "sensors/light";
+    const char* topic = "reponse/light";
     char* remessage ="off";
     MQTTMessage message;
     message.qos = qos; 
@@ -372,7 +387,7 @@ typedef struct {
     
     
 
-} */
+}  */
 /* void *PrintHello(void *threadid)
 {
    long tid;
@@ -382,31 +397,59 @@ typedef struct {
 }
  */
 
+    // Function to enqueue a message
+void enqueue(mqtt_message_t* message) {
+  queue_t* new_node = (queue_t*)malloc(sizeof(queue_t));
+  new_node->data = message;
+  new_node->next = NULL;
+
+  if (head == NULL) {
+    head = tail = new_node;
+  } else {
+    tail->next = new_node;
+    tail = new_node;
+  }
+}
+
+// Function to dequeue a message (replace with appropriate error handling)
+mqtt_message_t* dequeue(void) {
+  if (head == NULL) {
+    return NULL;
+  }
+
+  queue_t* temp = head;
+  mqtt_message_t* message = (mqtt_message_t*)temp->data;
+
+  head = head->next;
+  if (head == NULL) {
+    tail = NULL;
+  }
+
+  free(temp);
+  return message;
+}
+    
+
+
+    
 void on_msg_updated(MessageData *data) {
     // Extract topic and payload from the message
-   /*  char topic_buf[128];
+    char topic_buf[128];
     char payload_buf[128];
-     */
+   
     printf("paho_mqtt_example: message received on topic"
            " %.*s: %.*s\n",
            (int)data->topicName->lenstring.len,
            data->topicName->lenstring.data, (int)data->message->payloadlen,
            (char *)data->message->payload);
-   /*  strncpy(topic_buf, data->topicName->lenstring.data, data->topicName->lenstring.len);
+    
+   strncpy(topic_buf, data->topicName->lenstring.data, data->topicName->lenstring.len);
     topic_buf[data->topicName->lenstring.len] = '\0';
     strncpy(payload_buf, (char *)data->message->payload, data->message->payloadlen);
-    payload_buf[data->message->payloadlen] = '\0'; */
+    payload_buf[data->message->payloadlen] = '\0';
     
-    // Update the corresponding message based on the topic
-    /* if (strcmp(topic_buf, "sensors/light") == 0 && strcmp(payload_buf, "turn_on") == 0) {
-        printf("Testing light--------------------------- \n");
-        pthread_t thread_id; 
-        printf("Before Thread\n"); 
-        pthread_create(&thread_id, NULL, auto_pub, NULL); 
-        pthread_join(thread_id, NULL);
-        printf("After Thread\n"); 
-        
-    } */
+    
+
 }
 
 
@@ -418,7 +461,8 @@ static int auto_pubAll(void) {
         {"sensors/humidity", "humidity_data"},
         {"sensors/light", "turn_on"}
     };
-
+   
+    
     enum QoS qos = 1; 
 
     MQTTMessage message;
@@ -446,7 +490,7 @@ static int auto_pubAll(void) {
     return rc; 
 }
   
-static int auto_subAll(void) {
+int auto_subAll(void) {
     // Define an array of topics to subscribe to
     char *topics[] = {
         "sensors/temperature",
@@ -470,57 +514,48 @@ static int auto_subAll(void) {
             topic_cnt++;
         }
     }
-    
+        
     return ret;
 }
-
+int light =0 ;
 void lightMessageHandler(MessageData *data){
-    printf("Light HANDLER-----------------------------------------\n")    ;
-    printf("paho_mqtt_example: message received on light topic"
-           " %.*s: %.*s\n",
-           (int)data->topicName->lenstring.len,
-           data->topicName->lenstring.data, (int)data->message->payloadlen,
-           (char *)data->message->payload);
+    mqtt_message_t* msg = (mqtt_message_t*)malloc(sizeof(mqtt_message_t));
+    msg->topic = (char*)malloc(data->topicName->lenstring.len + 1);
+    strncpy(msg->topic, data->topicName->lenstring.data, data->topicName->lenstring.len);
+    msg->topic[data->topicName->lenstring.len] = '\0';
+    msg->topic_len = data->topicName->lenstring.len;
+    msg->payload = (char*)malloc(data->message->payloadlen + 1);
+    strncpy(msg->payload, (char *)data->message->payload,data->message->payloadlen);
+    msg->payload[data->message->payloadlen] = '\0';
+    msg->payload_len = data->message->payloadlen;
     
-
-
+    enqueue(msg);
 
 }
-static int auto_handler(void){
-    int counter = 0;
-    int ret = MQTTSetMessageHandler(&client, "sensors/light", lightMessageHandler);
-    printf("this isc calling %d \n",ret);
-    if (ret < 0) {
-            printf("mqtt_example: Unable to handle to topic: sensors/light\n");
-            return ret;
-        } 
+
+
+static int update_light(const char* topic, char* payload){
+   
+    enum QoS qos = 1; 
+    MQTTMessage message;
+    message.qos = qos; 
+    message.retained = IS_RETAINED_MSG; 
+    message.payload = (void *)payload;
+    message.payloadlen = strlen(message.payload);
+    int rc = MQTTPublish(&client, topic, &message);
+    if (rc < 0) {
+        printf("mqtt_example: Unable to publish (%d)\n", rc);
+    }
     else {
-            counter++;
-            printf("This is the %d --------------\n", counter);
-            const char* topic = "response/light";
-            char* payload = strdup("light_on");
-            enum QoS qos = 1; 
-            MQTTMessage message;
-            message.qos = qos; 
-            message.retained = IS_RETAINED_MSG; 
-            message.payload = (void *)payload;
-            message.payloadlen = strlen(message.payload);
-            int rc = MQTTPublish(&client, topic, &message);
-            if (rc < 0) {
-                printf("mqtt_example: Unable to publish (%d)\n", rc);
-            }
-            else {
-                printf("mqtt_example: Message (%s) has been published to topic %s"
-                    "with QOS %d\n",
-                    (char *)message.payload, topic, (int)message.qos);
-            }
-            free(payload);
-            return rc;
-        }
+        printf("mqtt_example: Message (%s) has been published to topic %s"
+            "with QOS %d\n",
+            (char *)message.payload, topic, (int)message.qos);
+    }
 
-    
+    return rc;
 
-    
+
+
 
 }
 
@@ -561,7 +596,29 @@ int main(void)
     auto_pubAll();
 
     auto_subAll();
-    auto_handler();
+    MQTTSetMessageHandler(&client, "sensors/light", lightMessageHandler);
+    
+    while (1) {
+    
+
+    // Check for messages in the queue
+    mqtt_message_t* msg = dequeue();
+    if (msg != NULL) {
+      // Process the message based on topic and payload
+      printf("Received message on topic: %s\n", msg->topic);
+      printf("Payload: %.*s\n", (int)msg->payload_len, msg->payload);
+      update_light("response/test","light_on");
+    
+
+      // Free the allocated memory for the message
+      free(msg->topic);
+      free(msg->payload);
+      free(msg);
+    }
+  }
+
+    
+    
     shell_run(shell_commands, line_buf, SHELL_DEFAULT_BUFSIZE);
     return 0;
 }
