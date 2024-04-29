@@ -8,25 +8,34 @@ import logging
 from telegram import Update
 from telegram.ext import CallbackContext
 from telegram import Bot
-import requests
 
-
+import spacy
+from spacy.matcher import Matcher
+from handler import identify_intent
 
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 # Telegram bot token
+#BOT_TOKEN = "6493593340:AAH0js-v0fL0QC-lvTBH4ts4ifpj8wPaN3M"
 BOT_TOKEN = "6881742840:AAEgTkuFUXNucJdSejI8ZfZ5e0OCzUleqtQ"
 
-broker = '3.87.254.59'
+broker = '54.158.234.157'
 port = 1883
 topics = ["sensors/temperature","sensors/motion", "sensors/light"]
 # Generate a Client ID with the subscribe prefix.
 client_id = f'subscribe-{random.randint(0, 100)}'
 
 
+nlp = spacy.load('en_core_web_sm')
+help_message = """
+    Hi there!  I'm the Home Guardian bot, keeping an eye on your environment. 
 
-
-
+    Here are all the available commands:
+    /help - See a list of all available commands.
+    /start - Warming up before you can connect to the broker
+    /con - Connect to the MQTT Broker
+    /pub topic/name message - Publish message to topic
+    """
 def connect_mqtt() -> mqtt_client:
     def on_connect(client, userdata, flags, rc):
         if rc == 0:
@@ -46,6 +55,7 @@ def on_message(client, userdata, msg):
 
     # Send the message to the Telegram chat
     bot.send_message(chat_id=chat_id, text=message)
+
 
 
 def on_publish(client,userdata,mid):             #create function for callback
@@ -70,7 +80,7 @@ def connect_broker(update, context):
     update.message.reply_text("Connected to MQTT broker.")
     update.message.reply_text(f"Subscribed to following topics: {', '.join(topics)}")
 
-def publish_command(update, context):
+def publish_cmd(update, context):
     client = context.bot_data.get('mqtt_broker') 
     
     topic = context.args[0]
@@ -101,14 +111,66 @@ def help(update,context):
     update.message.reply_text(help_message)
 
 
+""" 
+def identify_intent(text):
+    
+    matcher = Matcher(nlp.vocab)
 
+    doc = nlp(text.lower())
+    pattern_light1 = [
+        {"LEMMA": "turn"}, 
+        {"LEMMA": "on"}, 
+        {"POS": "DET", "OP": "?"},
+        {"POS": "NOUN", "OP": "?"},
+        {"TEXT": "light"},
+        {"OP": "?"}
+    ]
+ 
+    pattern_light2 = [
+        {"LEMMA": "turn"},  
+        {"POS": "DET", "OP": "?"},
+        {"POS": "NOUN", "OP": "?"},
+        {"TEXT": "light"},
+        {"LEMMA": "on"},
+        {"OP": "?"}
+    ]
+    # Add the pattern to the matcher
+    matcher.add("TURN_ON_LIGHT_PATTERN", [pattern_light1,pattern_light2])
+    
+    # Apply the matcher to the doc
+    matches = matcher(doc)
+    for match_id, start, end in matches:
+        matched_pattern_id = match_id  
+        if matched_pattern_id == matcher.vocab.strings["TURN_ON_LIGHT_PATTERN"]:
+            print("Turn the light on pattern detected!")
+            return "turn_on_light"
+        else:
+             return "help"
+
+ """
 def start(update: Update, context: CallbackContext) -> None:
     global chat_id
     chat_id = update.effective_chat.id
     
     print(f"Chat ID is: {chat_id}")
     context.bot.send_message(chat_id=chat_id, text="Welcome")
-    
+    client = connect_mqtt()
+    context.bot_data['mqtt_broker'] = client
+    subscribe_topic(client)
+    client.loop_start()
+
+def handle_telegram_message(update, context):
+    print("handler is being called")
+    user_message = update.message.text
+    intent = identify_intent(user_message)
+
+    if intent == "turn_on_light":
+        client = context.bot_data.get('mqtt_broker')  
+        publish(client, "sensors/light", "on")  
+        update.message.reply_text("Turning the light on!")
+    else:
+        update.message.reply_text(help_message)
+        
 
 def main():
     
@@ -122,12 +184,12 @@ def main():
     dp.add_handler(CommandHandler("con", connect_broker))
     dp.add_handler(CommandHandler("help", help))
     dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("pub", publish_command))
-    updater.dispatcher.add_handler(MessageHandler(Filters.text, unknown_text)) 
+    dp.add_handler(CommandHandler("pub", publish_cmd))
+    updater.dispatcher.add_handler(MessageHandler(Filters.text, handle_telegram_message)) 
     # Start the Bot
     updater.start_polling()
 
-
+    
     # Run the bot until you send a signal to stop it
     updater.idle()
     
