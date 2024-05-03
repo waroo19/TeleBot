@@ -26,7 +26,7 @@ def identify_intent(text):
     pattern_light_off = [
          [{"LEMMA": "turn"}, {"LEMMA": "off"}], 
         [{"LEMMA": "switch"}, {"LEMMA": "off"}],
-        [{"LEMMA": "activate"}],
+        [{"LEMMA": "deactivate"}],
         [{"POS": "DET", "OP": "?"}, {"LEMMA": "light"}],
         [{"POS": "DET", "OP": "?"}, {"LEMMA": "light", "TAG": "NNS"}],
         [{"LEMMA": "off"},{"OP": "?"}],
@@ -72,6 +72,36 @@ def identify_intent(text):
 
     matcher.add("GREETING", pattern_greet)
 
+    ###########################Thermostat########################
+    pattern_temp_complaint = [
+    [{"LOWER": {"IN": ["too", "way", "really", "freezing", "chilly"]}}], 
+    [{"LOWER": {"IN": ["hot", "warm", "cold"]}}],
+    [{"LOWER": "?", "OP": "?"}],
+    
+]
+    
+    pattern_ac_on = [
+         [{"LEMMA": "turn"}, {"LEMMA": "on"}], 
+        [{"LEMMA": "switch"}, {"LEMMA": "on"}],
+        [{"LEMMA": "activate"}],
+        [{"POS": "DET", "OP": "?"}, {"LEMMA":{"IN": ["air conditioner", "ac"]}}],
+        [{"POS": "DET", "OP": "?"}, {"LEMMA": {"IN": ["air conditioner", "ac"]}, "TAG": "NNS"}],
+        [{"LEMMA": "on"},{"OP": "?"}],
+    ]
+    pattern_ac_off = [
+         [{"LEMMA": "turn"}, {"LEMMA": "off"}], 
+        [{"LEMMA": "switch"}, {"LEMMA": "off"}],
+        [{"LEMMA": "activate"}],
+        [{"POS": "DET", "OP": "?"}, {"LEMMA":{"IN": ["air conditioner", "ac"]}}],
+        [{"POS": "DET", "OP": "?"}, {"LEMMA": {"IN": ["air conditioner", "ac"]}, "TAG": "NNS"}],
+        [{"LEMMA": "on"},{"OP": "?"}],
+    ]
+
+   
+    matcher.add("AC_ON", pattern_ac_on)
+    matcher.add("AC_OFF", pattern_ac_off)
+    matcher.add("TEMP_COMP", pattern_temp_complaint) 
+
 
     # Apply the matcher to the doc
     matches = matcher(doc)
@@ -92,6 +122,17 @@ def identify_intent(text):
         elif matched_pattern_id == matcher.vocab.strings["GREETING"]:
             print("Hi pattern detected!")
             return "start"
+        elif matched_pattern_id == matcher.vocab.strings["AC_ON"]:
+            print("AC ON pattern detected!")
+            return "turn_on_ac"
+        elif matched_pattern_id == matcher.vocab.strings["AC_OFF"]:
+            print("AC OFF pattern detected!")
+            return "turn_off_ac"
+        elif matched_pattern_id == matcher.vocab.strings["TEMP_COMP"]:
+            print("room temp pattern detected!")
+            return "temperature"
+        
+        
         
         
         else:

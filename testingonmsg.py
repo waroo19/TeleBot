@@ -36,6 +36,18 @@ start_message = """"
     👋 Welcome to the My Home Guardian bot!  
     My sense of humor may be a bit glitchy, but my security protocols are rock-solid.
     """
+redirect_message =  """
+    I might not be able to help with that directly. 
+    However, I excel at controlling your lights, alarm, and thermostat with MQTT.  
+    Could I assist with one of those tasks instead?
+
+    """
+temp_message =  """
+    I sense a temperature disturbance! 
+    Perhaps your trusty AC unit and I should team up. 
+    Would you like it on or off to restore comfort?
+
+    """
 def connect_mqtt() -> mqtt_client:
     def on_connect(client, userdata, flags, rc):
         if rc == 0:
@@ -175,17 +187,27 @@ def handle_telegram_message(update, context):
         update.message.reply_text("Turning the light off!")
     elif intent == "turn_on_alarm":
         client = context.bot_data.get('mqtt_broker')  
-        publish(client, "sensors/sensors", "on")  
+        publish(client, "sensors/motion", "on")  
         update.message.reply_text("Turning the alarm on!")
+    elif intent == "turn_on_ac":
+        client = context.bot_data.get('mqtt_broker')  
+        publish(client, "sensors/temperature", "30")  
+        update.message.reply_text("Turning the AC on!")
+    elif intent == "turn_off_ac":
+        client = context.bot_data.get('mqtt_broker')  
+        publish(client, "sensors/temperature", "18")  
+        update.message.reply_text("Turning the AC off!")
     elif intent == "help":
         client = context.bot_data.get('mqtt_broker')  
-        update.message.reply_text("Tired of fumbling for light switches? I'm your friendly lighting assistant!  Let's brighten things up.Starting with light control. Say something like, 'Turn on the kitchen light'")
+        update.message.reply_text(help_message)
     elif intent == "start":
         client = context.bot_data.get('mqtt_broker')  
-        update.message.reply_text("👋 Welcome on **My Home Guardian bot**! Press /start to connect to service")
-    
+        update.message.reply_text(start_message)
+    elif intent == "temperature":
+        client = context.bot_data.get('mqtt_broker')  
+        update.message.reply_text(temp_message)
     else:
-        update.message.reply_text(help_message)
+        update.message.reply_text(redirect_message)
         
 
 def main():
