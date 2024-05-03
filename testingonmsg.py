@@ -8,18 +8,18 @@ import logging
 from telegram import Update
 from telegram.ext import CallbackContext
 from telegram import Bot
-
+import threading
 import spacy
 from spacy.matcher import Matcher
 from handler import identify_intent
-
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 # Telegram bot token
 #BOT_TOKEN = "6493593340:AAH0js-v0fL0QC-lvTBH4ts4ifpj8wPaN3M"
 BOT_TOKEN = "6881742840:AAEgTkuFUXNucJdSejI8ZfZ5e0OCzUleqtQ"
 
-broker = '54.158.234.157'
+broker = '54.172.142.94'
 port = 1883
 topics = ["sensors/temperature","sensors/motion", "sensors/light"]
 # Generate a Client ID with the subscribe prefix.
@@ -28,13 +28,13 @@ client_id = f'subscribe-{random.randint(0, 100)}'
 
 nlp = spacy.load('en_core_web_sm')
 help_message = """
-    Hi there!  I'm the Home Guardian bot, keeping an eye on your environment. 
-
-    Here are all the available commands:
-    /help - See a list of all available commands.
-    /start - Warming up before you can connect to the broker
-    /con - Connect to the MQTT Broker
-    /pub topic/name message - Publish message to topic
+    Tired of fumbling for light switches? I'm your friendly lighting assistant!  
+    Let's brighten things up.Starting with light control. 
+    Say something like, 'Turn on the kitchen light'
+    """
+start_message = """"
+    👋 Welcome to the My Home Guardian bot!  
+    My sense of humor may be a bit glitchy, but my security protocols are rock-solid.
     """
 def connect_mqtt() -> mqtt_client:
     def on_connect(client, userdata, flags, rc):
@@ -153,7 +153,8 @@ def start(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_chat.id
     
     print(f"Chat ID is: {chat_id}")
-    context.bot.send_message(chat_id=chat_id, text="Welcome")
+    context.bot.send_message(chat_id=chat_id, text=help_message)
+
     client = connect_mqtt()
     context.bot_data['mqtt_broker'] = client
     subscribe_topic(client)
@@ -168,6 +169,21 @@ def handle_telegram_message(update, context):
         client = context.bot_data.get('mqtt_broker')  
         publish(client, "sensors/light", "on")  
         update.message.reply_text("Turning the light on!")
+    elif intent == "turn_off_light":
+        client = context.bot_data.get('mqtt_broker')  
+        publish(client, "sensors/light", "off")  
+        update.message.reply_text("Turning the light off!")
+    elif intent == "turn_on_alarm":
+        client = context.bot_data.get('mqtt_broker')  
+        publish(client, "sensors/sensors", "on")  
+        update.message.reply_text("Turning the alarm on!")
+    elif intent == "help":
+        client = context.bot_data.get('mqtt_broker')  
+        update.message.reply_text("Tired of fumbling for light switches? I'm your friendly lighting assistant!  Let's brighten things up.Starting with light control. Say something like, 'Turn on the kitchen light'")
+    elif intent == "start":
+        client = context.bot_data.get('mqtt_broker')  
+        update.message.reply_text("👋 Welcome on **My Home Guardian bot**! Press /start to connect to service")
+    
     else:
         update.message.reply_text(help_message)
         
@@ -187,9 +203,10 @@ def main():
     dp.add_handler(CommandHandler("pub", publish_cmd))
     updater.dispatcher.add_handler(MessageHandler(Filters.text, handle_telegram_message)) 
     # Start the Bot
+    #polling_thread = threading.Thread(target=updater.start_polling)
     updater.start_polling()
-
-    
+    #polling_thread.start()
+    #polling_thread.join()
     # Run the bot until you send a signal to stop it
     updater.idle()
     
