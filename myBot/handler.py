@@ -12,35 +12,26 @@ def identify_intent(text):
     ############ Light pattern #########################
 
     pattern_light_on = [
-         [{"LEMMA": "turn"}, {"LEMMA": "on"}], 
-        [{"LEMMA": "switch"}, {"LEMMA": "on"}],
-        [{"LEMMA": "activate"}],
-        [{"POS": "DET", "OP": "?"}, {"LEMMA": "light"}],
-        [{"POS": "DET", "OP": "?"}, {"LEMMA": "light", "TAG": "NNS"}],
-        [{"LEMMA": "on"},{"OP": "?"}],
+        [{"LEMMA":{"IN": ["turn on", "switch on","activate"]}}], 
+        [{"LEMMA": "light"}],
+        [{"LEMMA": "light", "TAG": "NNS"}],
     ]
     # Add the pattern to the matcher
     matcher.add("TURN_ON_LIGHT", pattern_light_on)
     
     
     pattern_light_off = [
-         [{"LEMMA": "turn"}, {"LEMMA": "off"}], 
-        [{"LEMMA": "switch"}, {"LEMMA": "off"}],
-        [{"LEMMA": "deactivate"}],
-        [{"POS": "DET", "OP": "?"}, {"LEMMA": "light"}],
-        [{"POS": "DET", "OP": "?"}, {"LEMMA": "light", "TAG": "NNS"}],
-        [{"LEMMA": "off"},{"OP": "?"}],
+        [{"LEMMA":{"IN": ["turn off", "switch off","deactivate"]}}], 
+        [{"LEMMA": "light"}],
+        [{"LEMMA": "light", "TAG": "NNS"}],
     ]
     matcher.add("TURN_OFF_LIGHT", pattern_light_off)
 
     ############ Alarm pattern #########################
-    alarm_verbs = ["set", "switch", "activate", "start", "trigger", "engage"]
+    
     pattern_alarm_on = [
-    [{"LEMMA": {"IN":alarm_verbs}}],
-    [{"LEMMA": "on"},{"OP": "?"}],
-    [{"POS": "DET", "OP": "?"}],  
-    [{"LEMMA": "alarm"}],
-    [{"LEMMA": "on"},{"OP": "?"}],
+            [{"LEMMA":{"IN": ["turn on", "switch on","activate"]}}], 
+            [{"LEMMA": "alarm"}],
         ]
     matcher.add("TURN_ON_ALARM", pattern_alarm_on)
     #################### Help pattern #########################
@@ -81,20 +72,14 @@ def identify_intent(text):
 ]
     
     pattern_ac_on = [
-         [{"LEMMA": "turn"}, {"LEMMA": "on"}], 
-        [{"LEMMA": "switch"}, {"LEMMA": "on"}],
-        [{"LEMMA": "activate"}],
-        [{"POS": "DET", "OP": "?"}, {"LEMMA":{"IN": ["air conditioner", "ac"]}}],
-        [{"POS": "DET", "OP": "?"}, {"LEMMA": {"IN": ["air conditioner", "ac"]}, "TAG": "NNS"}],
-        [{"LEMMA": "on"},{"OP": "?"}],
+        [{"LEMMA":{"IN": ["turn on", "switch on","activate"]}}], 
+        [ {"LEMMA":{"IN": ["air conditioner", "ac"]}}],
+        [{"LEMMA": {"IN": ["air conditioner", "ac"]}, "TAG": "NNS"}],
     ]
     pattern_ac_off = [
-         [{"LEMMA": "turn"}, {"LEMMA": "off"}], 
-        [{"LEMMA": "switch"}, {"LEMMA": "off"}],
-        [{"LEMMA": "activate"}],
-        [{"POS": "DET", "OP": "?"}, {"LEMMA":{"IN": ["air conditioner", "ac"]}}],
-        [{"POS": "DET", "OP": "?"}, {"LEMMA": {"IN": ["air conditioner", "ac"]}, "TAG": "NNS"}],
-        [{"LEMMA": "on"},{"OP": "?"}],
+        [{"LEMMA":{"IN": ["turn off", "switch off","deactivate"]}}], 
+        [{"LEMMA":{"IN": ["air conditioner", "ac"]}}],
+        [{"LEMMA": {"IN": ["air conditioner", "ac"]}, "TAG": "NNS"}],
     ]
 
    
@@ -141,4 +126,5 @@ def identify_intent(text):
 
     
 if __name__ == '__main__':
-   identify_intent("switch on the lights ")
+    identify_intent("help")
+    identify_intent("turn on the alarm")
