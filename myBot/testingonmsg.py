@@ -19,7 +19,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 #BOT_TOKEN = "6493593340:AAH0js-v0fL0QC-lvTBH4ts4ifpj8wPaN3M"
 BOT_TOKEN = "6881742840:AAEgTkuFUXNucJdSejI8ZfZ5e0OCzUleqtQ"
 
-broker = '54.172.142.94'
+broker = '34.229.115.212'
 port = 1883
 topics = ["sensors/temperature","sensors/motion", "sensors/light"]
 # Generate a Client ID with the subscribe prefix.
@@ -29,12 +29,13 @@ client_id = f'subscribe-{random.randint(0, 100)}'
 nlp = spacy.load('en_core_web_sm')
 help_message = """
     Tired of fumbling for light switches? I'm your friendly lighting assistant!  
-    Let's brighten things up.Starting with light control. 
+    Let's brighten things up. Starting with light control. 
     Say something like, 'Turn on the kitchen light'
     """
 start_message = """"
     👋 Welcome to the My Home Guardian bot!  
-    My sense of humor may be a bit glitchy, but my security protocols are rock-solid.
+    My sense of humor may be a bit glitchy, but my security protocols are rock-solid. 
+    Please press /start to spark things up!
     """
 redirect_message =  """
     I might not be able to help with that directly. 
